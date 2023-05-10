@@ -1,0 +1,27 @@
+name: Deploy MultiDocker
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+      - run: docker build -t zwakelem/react-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true zwakelem/react-test npm test
+
+      - run: docker build -t zwakelem/multi-client ./client
+      - run: docker build -t zwakelem/multi-nginx ./nginx
+      - run: docker build -t zwakelem/multi-server ./server
+      - run: docker build -t zwakelem/multi-worker ./worker
+
+      - run: docker push -t zwakelem/multi-client
+      - run: docker push -t zwakelem/multi-nginx
+      - run: docker push -t zwakelem/multi-server
+      - run: docker push -t zwakelem/multi-worker
+
+      - name: Generate deployment package
+        run: zip -r deploy.zip . -x '*.'*.git'
